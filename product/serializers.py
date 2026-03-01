@@ -18,3 +18,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = '__all__'
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = 'all'
