@@ -1,49 +1,56 @@
 from rest_framework import serializers
-from .models import Category, Product, Review
+from django.contrib.auth.models import User
+from .models import ConfirmationCode
+import random
 
-
-
-class CategorySerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Category
-        fields = '__all__'
-
-    def validate_name(self, value):
-        if len(value) < 3:
-            raise serializers.ValidationError("Category name must be at least 3 characters.")
-        return value
-
-
-class ProductSerializer(serializers.ModelSerializer):
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = Product
-        fields = '__all__'
+        model = User
+        fields = ['username', 'password']
 
-    def validate_price(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("Price must be greater than 0.")
-        return value
+    def create(self, validated_data):
+        user = User(
+            username=validated_data['username'],
+            is_active=False  # ❗ НЕАКТИВНЫЙ
+        )
+        user.set_password(validated_data['password'])
+        user.save()
 
-    def validate_name(self, value):
-        if len(value) < 2:
-            raise serializers.ValidationError("Product name is too short.")
-        return value
+        code = str(random.randint(100000, 999999))
+
+        ConfirmationCode.objects.create(
+            user=user,
+            code=code
+        )
+
+        print("CONFIRM CODE:", code)
+
+        return user
 
 
-class ReviewSerializer(serializers.ModelSerializer):
+class ConfirmSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    code = serializers.CharField()
 
-    class Meta:
-        model = Review
-        fields = '__all__'
+    def validate(self, data):
+        try:
+            user = User.objects.get(username=data['username'])
+            confirm = ConfirmationCode.objects.get(user=user)
 
-    def validate_rating(self, value):
-        if value < 1 or value > 5:
-            raise serializers.ValidationError("Rating must be between 1 and 5.")
-        return value
+            if confirm.code != data['code']:
+                raise serializers.ValidationError("Неверный код")
 
-    def validate_text(self, value):
-        if len(value) < 5:
-            raise serializers.ValidationError("Review text is too short.")
-        return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Пользователь не найден")
+
+        return data
+
+    def save(self):
+        user = User.objects.get(username=self.validated_data['username'])
+        user.is_active = True
+        user.save()
+
+        ConfirmationCode.objects.filter(user=user).delete()
+        return user
