@@ -1,8 +1,15 @@
-from rest_framework import generics
-from django.contrib.auth import authenticate
+from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework import status
-from .serializers import RegisterSerializer, ConfirmSerializer
+from rest_framework.viewsets import ModelViewSet
+from django.contrib.auth import authenticate
+
+from .models import Product
+from .serializers import (
+    ProductSerializer,
+    RegisterSerializer,
+    ConfirmSerializer
+)
+from .permissions import IsModerator
 
 
 class RegisterView(generics.CreateAPIView):
@@ -20,14 +27,32 @@ class ConfirmView(generics.GenericAPIView):
 
 
 class LoginView(generics.GenericAPIView):
+
     def post(self, request):
-        username = request.data.get("username")
+        email = request.data.get("email")
         password = request.data.get("password")
 
-        user = authenticate(username=username, password=password)
+        user = authenticate(email=email, password=password)
 
         if user:
             if not user.is_active:
-                return Response({"error": "Аккаунт не подтверждён"}, status=400)
+                return Response(
+                    {"error": "Аккаунт не подтверждён"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             return Response({"message": "Вы вошли в систему"})
-        return Response({"error": "Неверные данные"}, status=400)
+
+        return Response(
+            {"error": "Неверные данные"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+class ProductViewSet(ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+
+    def get_permissions(self):
+        if self.request.user.is_staff:
+            return [IsModerator()]
+
+        return []
