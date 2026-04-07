@@ -1,5 +1,5 @@
-from django.contrib.auth.models import User
 from django.db import models
+from django.conf import settings
 
 
 class Category(models.Model):
@@ -27,10 +27,9 @@ class Review(models.Model):
         return f"{self.product.name} - {self.rating}"
 
 
-
 class ConfirmationCode(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)
 
     def __str__(self):
-        return f"{self.user.username} - {self.code}"
+        return f"{self.user} - {self.code}"
