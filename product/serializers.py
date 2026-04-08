@@ -1,19 +1,28 @@
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from .models import ConfirmationCode
+from users.models import CustomUser
+from .models import Product, ConfirmationCode
 import random
+
+
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = '__all__'
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = User
-        fields = ['username', 'password']
+        model = CustomUser
+        fields = ['email', 'password', 'birthdate', 'phone_number']
 
     def create(self, validated_data):
-        user = User(
-            username=validated_data['username'],
-            is_active=False  # ❗ НЕАКТИВНЫЙ
+        user = CustomUser(
+            email=validated_data['email'],
+            birthdate=validated_data.get('birthdate'),
+            phone_number=validated_data.get('phone_number'),
+            is_active=False
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -31,24 +40,24 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class ConfirmSerializer(serializers.Serializer):
-    username = serializers.CharField()
+    email = serializers.EmailField()
     code = serializers.CharField()
 
     def validate(self, data):
         try:
-            user = User.objects.get(username=data['username'])
+            user = CustomUser.objects.get(email=data['email'])
             confirm = ConfirmationCode.objects.get(user=user)
 
             if confirm.code != data['code']:
                 raise serializers.ValidationError("Неверный код")
 
-        except User.DoesNotExist:
+        except CustomUser.DoesNotExist:
             raise serializers.ValidationError("Пользователь не найден")
 
         return data
 
     def save(self):
-        user = User.objects.get(username=self.validated_data['username'])
+        user = CustomUser.objects.get(email=self.validated_data['email'])
         user.is_active = True
         user.save()
 

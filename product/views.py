@@ -3,6 +3,9 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django.contrib.auth import authenticate
 
+from users.tokens import get_tokens_for_user
+from common.validators import validate_age_from_token  # 👈 ВАЖНО
+
 from .models import Product
 from .serializers import (
     ProductSerializer,
@@ -40,12 +43,13 @@ class LoginView(generics.GenericAPIView):
                     {"error": "Аккаунт не подтверждён"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            return Response({"message": "Вы вошли в систему"})
+            return Response(get_tokens_for_user(user))
 
         return Response(
             {"error": "Неверные данные"},
             status=status.HTTP_400_BAD_REQUEST
         )
+
 
 class ProductViewSet(ModelViewSet):
     queryset = Product.objects.all()
@@ -56,3 +60,8 @@ class ProductViewSet(ModelViewSet):
             return [IsModerator()]
 
         return []
+
+
+    def create(self, request, *args, **kwargs):
+        validate_age_from_token(request)
+        return super().create(request, *args, **kwargs)
