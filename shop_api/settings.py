@@ -134,3 +134,7 @@ SIMPLE_JWT = {
 GOOGLE_CLIENT_ID = 'твой_client_id'
 GOOGLE_CLIENT_SECRET = 'твой_client_secret'
 GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/api/v1/google/callback/'
+
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_DB = 0

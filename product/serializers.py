@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from users.models import CustomUser
-from .models import Product, ConfirmationCode
+from .models import Product
+from common.redis_client import redis_client
 import random
 
 
@@ -29,9 +30,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         code = str(random.randint(100000, 999999))
 
-        ConfirmationCode.objects.create(
-            user=user,
-            code=code
+        redis_client.setex(
+            f"confirm_code:{user.email}",
+            300,
+            code
         )
 
         print("CONFIRM CODE:", code)
@@ -44,15 +46,13 @@ class ConfirmSerializer(serializers.Serializer):
     code = serializers.CharField()
 
     def validate(self, data):
-        try:
-            user = CustomUser.objects.get(email=data['email'])
-            confirm = ConfirmationCode.objects.get(user=user)
+        stored_code = redis_client.get(f"confirm_code:{data['email']}")
 
-            if confirm.code != data['code']:
-                raise serializers.ValidationError("Неверный код")
+        if not stored_code:
+            raise serializers.ValidationError("Код истёк или не найден")
 
-        except CustomUser.DoesNotExist:
-            raise serializers.ValidationError("Пользователь не найден")
+        if stored_code != data['code']:
+            raise serializers.ValidationError("Неверный код")
 
         return data
 
@@ -61,5 +61,7 @@ class ConfirmSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
 
-        ConfirmationCode.objects.filter(user=user).delete()
+
+        redis_client.delete(f"confirm_code:{self.validated_data['email']}")
+
         return user

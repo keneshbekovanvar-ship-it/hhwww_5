@@ -26,10 +26,3 @@ class Review(models.Model):
     def __str__(self):
         return f"{self.product.name} - {self.rating}"
 
-
-class ConfirmationCode(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    code = models.CharField(max_length=6)
-
-    def __str__(self):
-        return f"{self.user} - {self.code}"
