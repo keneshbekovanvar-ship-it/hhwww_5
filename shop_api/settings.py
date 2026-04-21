@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'product',
     'users',
     'common',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -138,3 +139,26 @@ GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/api/v1/google/callback/'
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 REDIS_DB = 0
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+from datetime import timedelta
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'delete-products-every-night': {
+        'task': 'product.tasks.delete_cheap_products',
+        'schedule': crontab(hour=0, minute=0),
+    },
+}
+
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your_email@gmail.com'
+EMAIL_HOST_PASSWORD = 'your_app_password'
